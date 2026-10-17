@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>
+@page { size: A4; margin: 13mm 14mm; }
+body { font-family: "Liberation Sans", Arial, sans-serif; font-size: 9.2pt; color: #1a1a1a; line-height: 1.27; }
+h1 { font-size: 17pt; margin: 0 0 2px 0; color: #0f2b46; }
+.tagline { font-size: 10.5pt; color: #14532d; font-weight: bold; margin-bottom: 2px; }
+.contact { font-size: 8.5pt; color: #444; margin-bottom: 10px; }
+h2 { font-size: 10.2pt; color: #0f2b46; border-bottom: 1.5px solid #0f2b46; padding-bottom: 2px; margin: 8px 0 4px 0; text-transform: uppercase; letter-spacing: 0.5px; }
+p { margin: 4px 0; }
+ul { margin: 4px 0 6px 0; padding-left: 16px; }
+li { margin-bottom: 2px; }
+.job { margin-bottom: 6px; }
+.jobhead { font-weight: bold; font-size: 10pt; }
+.jobhead span.right { float: right; font-weight: normal; color: #555; font-size: 9pt; }
+.sub { font-style: italic; color: #333; font-size: 9pt; }
+.stack { color: #555; font-size: 8.5pt; }
+b.num { color: #14532d; }
+</style></head><body>
+
+<h1>IGNACIO BENITO HERRERO</h1>
+<div class="tagline">Senior Software Engineer · GPU Kernels &amp; LLM Inference Optimization · HIP/ROCm · Vulkan · Quantization · Speculative Decoding</div>
+<div class="contact">Spain (remote) · github.com/nachobh — perf notes: github.com/nachobh/gpu-perf-notes · ibenitoherrero@gmail.com · English C2 (Cambridge Proficiency)</div>
+<h2>Summary</h2>
+I root-cause kernel-level bottlenecks (shared-memory bank conflicts, dequantization paths), quantify quantization and speculative-decoding trade-offs against pinned upstream baselines, and validate every claim with numerical-correctness checks and repeated, synchronized benchmarks. I have built one evaluation task end-to-end in the target format — specification, pinned baseline, reference solution, and an automated verifier with fail-closed correctness and mandatory held-out benchmarking (<a href="https://github.com/nachobh/gpu-perf-notes">github.com/nachobh/gpu-perf-notes</a>). Senior engineer with 10+ years building and leading production backend systems and 1.5+ years of deep, documented GPU/LLM-inference optimization on AMD Strix Halo (Radeon 8060S, 103 GB unified VRAM). I write performance notes that record dead ends alongside wins.
+
+<h2>GPU &amp; Inference Systems (independent research, 2025 – present)</h2>
+<p class="sub">llama.cpp fork work on ROCm 7.2.4 / HIP and Vulkan, targets gfx1150/gfx1151 · all results measured on one machine against clean upstream builds (commit-pinned), first-run variance discarded</p>
+<ul>
+<li><b class="num">Kernel diagnosis:</b> root-caused a four-way LDS shared-memory bank conflict in llama.cpp's Vulkan cooperative-matrix matmul via <span style="font-family:monospace">gcd(SHMEM_STRIDE, 32)</span> analysis and a padding sweep; a padding-stride change (plus host shared-memory budgeting) delivered <b class="num">+14.1% prefill</b> (272.8→311.3 tok/s, historical measurement vs upstream 95b8e33e1); the fix is re-ported onto the current merged branch with the full MUL_MAT suite green on Vulkan — the paired re-measurement is pending and will be reported as-is.</li>
+<li><b class="num">Quantization evaluation:</b> built and evaluated a ROCmFP4 path (CPU/Vulkan kernels; HIP backend op integration open) for a 27B model against a strong K-quant baseline on identical hardware: 12% smaller, +7% batch-1 decode (12.56 vs 11.71 tok/s), PPL gap "small but probably real" (5.9842 ± 0.071 vs 5.8965 ± 0.070 — overlapping error bars, reported as such rather than as parity).</li>
+<li><b class="num">Flagship fix — FP4 batched spec-decode verification (Qwen3.8-27B, DFlash2, Vulkan):</b> FP4 initially <i>lost</i> to the K-quant under spec decode (16.8 vs 22.3 tok/s at n-max 3) despite similar acceptance (52.7% vs 55.2%). Root cause: the batched mat-vec kernels were mis-tuned for the batch 3–8 verification range — per-call re-decoding of block scales and a branchy per-weight dequant path whose cost scaled linearly with batch — plus a mixed-type GGUF where a single Q6_0 <code>output.weight</code> tensor cost 22 ms/step. Fixed with whole-block scale amortization and a branch-free dequant: prose spec-decode 16.8 → 24.6 tok/s (+46%), batched gains +6% (B=1) → +65% (B=8), kernel-level n=8 mat-vec 312 → 173 µs.</li>
+<li><b class="num">Adaptive draft length for spec decode (shipped feature):</b> acceptance signal was measured but discarded; added a per-sequence EMA controller whose key insight is that full acceptance <i>censors</i> the measurement (a lower bound, so it probes upward instead of averaging down). +48% prose / +33% JSON on a model-card-recommended fixed setting (best of four tested arms; roughly matches a tuned fixed setting elsewhere); turns n-max from a tuning parameter into a safety ceiling. Off by default; distribution-preserving.</li>
+<li><b class="num">Triton / training stack on AMD:</b> measured +7% training throughput with experimental AOTriton; FlashAttention-Triton-AMD and MIOpen tuning; PyTorch/ROCm LoRA fine-tuning (PEFT) and diffusion benchmark sweeps (resolution × steps).</li>
+<li><b class="num">Systems-level:</b> roofline-style analysis of ~256 GB/s UMA bandwidth ceiling (decode measured at 205–213 GB/s, 80–83% of theoretical — little kernel headroom left; launch/fusion opportunities remain); rewrote <code>llama-quantize</code> to stream in row bands (205 GB scratch → byte-identical output); KV-cache-to-RAM offload experiments; patched and DKMS-installed the amdgpu 31.50 driver for mainline kernel 7.1; one merged upstream llama.cpp PR — a UI/MCP fix (<a href="https://github.com/ggml-org/llama.cpp/pull/28089">ggml-org/llama.cpp#28089</a>), upstream-contribution proof rather than kernel work.</li>
+</ul>
+
+<h2>Professional Experience</h2>
+
+<div class="job"><div class="jobhead">CTO &amp; Founder — 40-ALL.com, fantasy-sports platform <span class="right">Jan 2024 – present</span></div>
+<p>Own the product end-to-end: Spring Boot 3 / Java 25 / PostgreSQL backend, Flutter apps, DevOps, live-tournament data pipelines. Designed the schema, wrote ~80% of the backend. Heavy use of AI coding agents (multi-model orchestration, automated evaluation of scraper output) and local LLM serving (llama.cpp on ROCm) in day-to-day engineering.</p></div>
+
+<div class="job"><div class="jobhead">Team Leader / Senior Developer — Amadeus (Cytric expense management) <span class="right">Feb 2022 – Dec 2023</span></div>
+<p>Hands-on leadership of a backend team (Java 11/17, Spring Boot 2, RabbitMQ, Oracle): hiring, 1:1s, delivery, high unit/integration test discipline (Serenity, WireMock, Mockito).</p></div>
+
+<div class="job"><div class="jobhead">Java Senior Developer — Odilo (gamification, AWS) <span class="right">Jan 2021 – Sep 2021</span></div>
+<p>Main backend driver for near-real-time event-driven gamification: API Gateway, SNS/SQS, DynamoDB, Oracle; introduced Docker-based local debugging.</p></div>
+
+<div class="job"><div class="jobhead">Java Analyst — Indra-Tecnocom (Inditex invoicing) <span class="right">Jun 2017 – Dec 2020</span></div>
+<p>Greenfield invoicing system (WebSphere, IBM MQ, DB2/AS400, Spring); deep observability and incident ownership with Dynatrace, Grafana, Graylog; distributed transactionality and optimistic locking under real constraints.</p></div>
+
+<div class="job"><div class="jobhead">Junior Consultant — Capgemini (Gas Natural) <span class="right">Oct 2015 – Apr 2017</span></div>
+<p>Bug-fixing and evolutions on a Java 6 / Spring 3 backend with Oracle support.</p></div>
+
+<h2>Open Source &amp; Portfolio (github.com/nachobh)</h2>
+<ul>
+<li><b>gpu-perf-notes</b> — the performance notes behind the results above, plus a worked evaluation task (spec + baseline + reference + anti-gaming verifier).</li>
+<li><b>llama.cpp fork</b> — ROCmFPx port, Vulkan LDS fix, batched spec-decode fixes, adaptive draft length, qwen4exp support.</li>
+<li><b>consejo-de-sabios</b> — multi-model debate pipeline (N parallel llama-server instances + orchestrator/referee) with quality-vs-latency benchmarks across solo/sabios/full modes.</li>
+<li><b>zimage-studio</b> — local multimodal panel: diffusion + LoRA training (PEFT), llama.cpp chat, TTS/STT, MCP bridge, multi-service orchestration.</li>
+<li><b>gpt2-from-scratch-llama2c</b> — GPT-2 (33.6M) trained from scratch, GGUF conversion verified numerically against a pure-PyTorch reconstruction.</li>
+</ul>
+
+<h2>Education &amp; Certifications</h2>
+<p>Degree in Mechanical Engineering — Universidad Politécnica de Cartagena (2007–2015) · Computer Science studies (unfinished) — UNED<br>
+Cambridge English C2 Proficiency (2023) · Certified SAFe 5 Practitioner (2022) · Advanced Spring Framework (2019)</p>
+
+<h2>Technical Stack</h2>
+<p class="stack"><b>GPU/ML:</b> llama.cpp (fork, HIP/Vulkan builds), ROCm 7.2.4/HIP, Vulkan compute (coopmat), Triton/AOTriton, PyTorch (ROCm), PEFT/LoRA, GGUF quantization (Q4_K_M, Q8_0, FP4), MTP speculative decoding, test-backend-ops benchmarking, rocprofv3, RADV shaderstats, radeontop<br>
+<b>Backend:</b> Java 6–25, Spring Boot 2/3, PostgreSQL, RabbitMQ, AWS (Lambda, SQS, SNS, API Gateway, DynamoDB), Docker, OpenShift, observability (Grafana, Dynatrace, Graylog)</p>
+
+</body></html>
