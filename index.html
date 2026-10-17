@@ -19,7 +19,7 @@ b.num { color: #14532d; }
 
 <h1>IGNACIO BENITO HERRERO</h1>
 <div class="tagline">Senior Software Engineer · GPU Kernels &amp; LLM Inference Optimization · HIP/ROCm · Vulkan · Quantization · Speculative Decoding</div>
-<div class="contact">Spain (remote) · github.com/nachobh — perf notes: github.com/nachobh/gpu-perf-notes · ibenitoherrero@gmail.com · English C2 (Cambridge Proficiency)</div>
+<div class="contact">Spain (remote) · <a href="https://github.com/nachobh">github.com/nachobh</a> — +34 600 71 69 62 · ibenitoherrero@gmail.com · English C2 (Cambridge Proficiency)</div>
 <h2>Summary</h2>
 I root-cause kernel-level bottlenecks (shared-memory bank conflicts, dequantization paths), quantify quantization and speculative-decoding trade-offs against pinned upstream baselines, and validate every claim with numerical-correctness checks and repeated, synchronized benchmarks. I have built one evaluation task end-to-end in the target format — specification, pinned baseline, reference solution, and an automated verifier with fail-closed correctness and mandatory held-out benchmarking (<a href="https://github.com/nachobh/gpu-perf-notes">github.com/nachobh/gpu-perf-notes</a>). Senior engineer with 10+ years building and leading production backend systems and 1.5+ years of deep, documented GPU/LLM-inference optimization on AMD Strix Halo (Radeon 8060S, 103 GB unified VRAM). I write performance notes that record dead ends alongside wins.
 
@@ -31,12 +31,12 @@ I root-cause kernel-level bottlenecks (shared-memory bank conflicts, dequantizat
 <li><b class="num">Flagship fix — FP4 batched spec-decode verification (Qwen3.8-27B, DFlash2, Vulkan):</b> FP4 initially <i>lost</i> to the K-quant under spec decode (16.8 vs 22.3 tok/s at n-max 3) despite similar acceptance (52.7% vs 55.2%). Root cause: the batched mat-vec kernels were mis-tuned for the batch 3–8 verification range — per-call re-decoding of block scales and a branchy per-weight dequant path whose cost scaled linearly with batch — plus a mixed-type GGUF where a single Q6_0 <code>output.weight</code> tensor cost 22 ms/step. Fixed with whole-block scale amortization and a branch-free dequant: prose spec-decode 16.8 → 24.6 tok/s (+46%), batched gains +6% (B=1) → +65% (B=8), kernel-level n=8 mat-vec 312 → 173 µs.</li>
 <li><b class="num">Adaptive draft length for spec decode (shipped feature):</b> acceptance signal was measured but discarded; added a per-sequence EMA controller whose key insight is that full acceptance <i>censors</i> the measurement (a lower bound, so it probes upward instead of averaging down). +48% prose / +33% JSON on a model-card-recommended fixed setting (best of four tested arms; roughly matches a tuned fixed setting elsewhere); turns n-max from a tuning parameter into a safety ceiling. Off by default; distribution-preserving.</li>
 <li><b class="num">Triton / training stack on AMD:</b> measured +7% training throughput with experimental AOTriton; FlashAttention-Triton-AMD and MIOpen tuning; PyTorch/ROCm LoRA fine-tuning (PEFT) and diffusion benchmark sweeps (resolution × steps).</li>
-<li><b class="num">Systems-level:</b> roofline-style analysis of ~256 GB/s UMA bandwidth ceiling (decode measured at 205–213 GB/s, 80–83% of theoretical — little kernel headroom left; launch/fusion opportunities remain); rewrote <code>llama-quantize</code> to stream in row bands (205 GB scratch → byte-identical output); KV-cache-to-RAM offload experiments; patched and DKMS-installed the amdgpu 31.50 driver for mainline kernel 7.1; one merged upstream llama.cpp PR — a UI/MCP fix (<a href="https://github.com/ggml-org/llama.cpp/pull/28089">ggml-org/llama.cpp#28089</a>), upstream-contribution proof rather than kernel work.</li>
+<li><b class="num">Systems-level:</b> roofline-style analysis of ~256 GB/s UMA bandwidth ceiling (decode measured at 205–213 GB/s, 80–83% of theoretical — little kernel headroom left; launch/fusion opportunities remain); rewrote <code>llama-quantize</code> to stream in row bands (205 GB scratch → byte-identical output); KV-cache-to-RAM offload experiments; patched and DKMS-installed the amdgpu 31.50 driver for mainline kernel 7.1; one merged upstream llama.cpp PR — a UI/MCP fix (<a href="https://github.com/ggml-org/llama.cpp/commit/85d5703a3b1b47243213a39059a6e3076c92733a">ggml-org/llama.cpp#28089</a>), upstream-contribution proof rather than kernel work.</li>
 </ul>
 
 <h2>Professional Experience</h2>
 
-<div class="job"><div class="jobhead">CTO &amp; Founder — 40-ALL.com, fantasy-sports platform <span class="right">Jan 2024 – present</span></div>
+<div class="job"><div class="jobhead">CTO &amp; Founder — <a href="https://40-all.com/">40-ALL.com</a>, fantasy-sports platform <span class="right">Jan 2024 – present</span></div>
 <p>Own the product end-to-end: Spring Boot 3 / Java 25 / PostgreSQL backend, Flutter apps, DevOps, live-tournament data pipelines. Designed the schema, wrote ~80% of the backend. Heavy use of AI coding agents (multi-model orchestration, automated evaluation of scraper output) and local LLM serving (llama.cpp on ROCm) in day-to-day engineering.</p></div>
 
 <div class="job"><div class="jobhead">Team Leader / Senior Developer — Amadeus (Cytric expense management) <span class="right">Feb 2022 – Dec 2023</span></div>
@@ -53,15 +53,15 @@ I root-cause kernel-level bottlenecks (shared-memory bank conflicts, dequantizat
 
 <h2>Open Source &amp; Portfolio (github.com/nachobh)</h2>
 <ul>
-<li><b>gpu-perf-notes</b> — the performance notes behind the results above, plus a worked evaluation task (spec + baseline + reference + anti-gaming verifier).</li>
-<li><b>llama.cpp fork</b> — ROCmFPx port, Vulkan LDS fix, batched spec-decode fixes, adaptive draft length, qwen4exp support.</li>
-<li><b>consejo-de-sabios</b> — multi-model debate pipeline (N parallel llama-server instances + orchestrator/referee) with quality-vs-latency benchmarks across solo/sabios/full modes.</li>
-<li><b>zimage-studio</b> — local multimodal panel: diffusion + LoRA training (PEFT), llama.cpp chat, TTS/STT, MCP bridge, multi-service orchestration.</li>
-<li><b>gpt2-from-scratch-llama2c</b> — GPT-2 (33.6M) trained from scratch, GGUF conversion verified numerically against a pure-PyTorch reconstruction.</li>
+<li><a href="https://github.com/nachobh/gpu-perf-notes"><b>gpu-perf-notes</b></a> — the performance notes behind the results above, plus a worked evaluation task (spec + baseline + reference + anti-gaming verifier).</li>
+<li><a href="https://github.com/nachobh/llama.cpp/tree/perf-master-2026-10"><b>llama.cpp fork</b></a> — ROCmFPx port, Vulkan LDS fix, batched spec-decode fixes, adaptive draft length, qwen4exp support.</li>
+<li><a href="https://github.com/nachobh/consejo-de-sabios"><b>consejo-de-sabios</b></a> — multi-model debate pipeline (N parallel llama-server instances + orchestrator/referee) with quality-vs-latency benchmarks across solo/sabios/full modes.</li>
+<li><a href="https://github.com/nachobh/zimage-studio"><b>zimage-studio</b></a> — local multimodal panel: diffusion + LoRA training (PEFT), llama.cpp chat, TTS/STT, MCP bridge, multi-service orchestration.</li>
+<li><a href="https://github.com/nachobh/gpt2-from-scratch-llama2c"><b>gpt2-from-scratch-llama2c</b></a> — GPT-2 (33.6M) trained from scratch, GGUF conversion verified numerically against a pure-PyTorch reconstruction.</li>
 </ul>
 
 <h2>Education &amp; Certifications</h2>
-<p>Degree in Mechanical Engineering — Universidad Politécnica de Cartagena (2007–2015) · Computer Science studies (unfinished) — UNED<br>
+<p>Degree in Mechanical Engineering — Universidad Politécnica de Cartagena (2007–2013)<br>Computer Science studies (unfinished) — UNED<br>
 Cambridge English C2 Proficiency (2023) · Certified SAFe 5 Practitioner (2022) · Advanced Spring Framework (2019)</p>
 
 <h2>Technical Stack</h2>
